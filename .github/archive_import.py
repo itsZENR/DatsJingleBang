@@ -8,7 +8,10 @@ import tempfile
 
 
 def run(*args, **kwargs):
-    return subprocess.run(args, check=True, text=True, capture_output=True, **kwargs).stdout.strip()
+    result = subprocess.run(args, text=True, capture_output=True, **kwargs)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or str(args))
+    return result.stdout.strip()
 
 
 def sha256(path):
@@ -23,6 +26,9 @@ def main():
     repository = os.environ["GITHUB_REPOSITORY"]
     uploaded_commit = os.environ["GITHUB_SHA"]
     transport = Path(".archive-upload")
+    if not (transport / "manifest.json").exists():
+        print("The archive transfer has not been committed yet; nothing to import.")
+        return
     manifest = json.loads((transport / "manifest.json").read_text())
     if manifest["repository"] != repository:
         raise RuntimeError("Archive destination does not match this repository")
@@ -82,7 +88,8 @@ def main():
             run("gh", "release", "create", tag, "--repo", repository, "--draft",
                 "--target", final_head, "--title", manifest["title"], "--notes-file", str(description))
         run("gh", "release", "upload", tag, "--repo", repository, "--clobber", *(str(path) for path in assets))
-        published_assets = json.loads(run("gh", "api", f"repos/{repository}/releases/tags/{tag}"))
+        releases = json.loads(run("gh", "api", f"repos/{repository}/releases?per_page=100"))
+        published_assets = next(release for release in releases if release["tag_name"] == tag)
         by_name = {asset["name"]: asset["size"] for asset in published_assets["assets"]}
         for asset in assets:
             if by_name.get(asset.name) != asset.stat().st_size:
