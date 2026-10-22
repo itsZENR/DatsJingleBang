@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DatsJingleBang - History Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Consolas', monospace;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .left-panel {
+            flex: 0 0 320px;
+        }
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #e94560;
+        }
+        h1 a {
+            color: #4ecca3;
+            text-decoration: none;
+            font-size: 0.6em;
+            margin-left: 10px;
+        }
+        h1 a:hover { text-decoration: underline; }
+        h2 {
+            font-size: 1.1em;
+            margin: 15px 0 10px;
+            color: #0f3460;
+            background: #e94560;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+        .info-label { color: #888; }
+        .info-value { color: #4ecca3; font-weight: bold; }
+        .bomber-card {
+            background: #0f3460;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 0.85em;
+        }
+        .bomber-card.dead { opacity: 0.5; }
+        .bomber-id { color: #e94560; font-size: 0.75em; }
+        .bomber-stats { display: flex; gap: 10px; margin-top: 5px; }
+        .stat { color: #4ecca3; }
+        #canvas {
+            border: 2px solid #e94560;
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85em;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input[type="file"] { display: none; }
+        button, label.btn {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover, label.btn:hover { background: #ff6b6b; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .zoom-info { color: #888; font-size: 0.85em; }
+        .coords {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #16213e;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .status {
+            font-size: 0.85em;
+            padding: 8px;
+            border-radius: 4px;
+            background: #0f3460;
+            margin-top: 10px;
+        }
+        .status.success { color: #4ecca3; }
+        .status.error { color: #ff6b6b; }
+        .history-section { display: flex; flex-direction: column; gap: 8px; }
+        .history-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .history-controls button {
+            padding: 5px 10px;
+            min-width: 32px;
+        }
+        #historyPosition {
+            min-width: 120px;
+            text-align: center;
+            color: #4ecca3;
+            font-size: 0.9em;
+        }
+        #historySlider {
+            width: 100%;
+            cursor: pointer;
+        }
+        .round-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 5px;
+        }
+        .round-nav button { font-size: 0.75em; padding: 4px 8px; }
+        #currentRound {
+            color: #f39c12;
+            font-size: 0.75em;
+            text-align: center;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .round-markers {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        .round-marker {
+            background: #0f3460;
+            color: #f39c12;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .round-marker:hover { border-color: #f39c12; }
+        .round-marker.active { background: #f39c12; color: #000; }
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .playback-controls button { padding: 5px 12px; }
+        .playback-controls select {
+            background: #0f3460;
+            color: #eee;
+            border: 1px solid #e94560;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        #playBtn.playing { background: #4ecca3; }
+        .iteration-big {
+            font-size: 2em;
+            color: #4ecca3;
+            text-align: center;
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .file-list {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #0f3460;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        .file-item {
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .file-item:hover { background: #1a3a6e; }
+        .file-item.active { background: #e94560; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel left-panel">
+            <h1>History <a href="visualizer.html">Live</a></h1>
+
+            <div class="iteration-big">
+                <span id="iteration">-</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Player:</span>
+                <span class="info-value" id="playerName">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Round:</span>
+                <span class="info-value" id="roundName">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Map Size:</span>
+                <span class="info-value" id="mapSize">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Score:</span>
+                <span class="info-value" id="score">-</span>
+            </div>
+
+            <h2>Bombers</h2>
+            <div id="bombersList"></div>
+
+            <h2>Stats</h2>
+            <div class="info-row">
+                <span class="info-label">Obstacles:</span>
+                <span class="info-value" id="obstaclesCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Walls:</span>
+                <span class="info-value" id="wallsCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Bombs:</span>
+                <span class="info-value" id="bombsCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Enemies:</span>
+                <span class="info-value" id="enemiesCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Mobs:</span>
+                <span class="info-value" id="mobsCount">0</span>
+            </div>
+
+            <h2>Log Files</h2>
+            <div id="fileList" class="file-list">Loading...</div>
+            <div class="controls">
+                <button onclick="refreshFileList()">Refresh</button>
+                <label class="btn">
+                    Open .jsonl
+                    <input type="file" id="fileInput" accept=".jsonl" onchange="loadLocalFile(event)">
+                </label>
+            </div>
+            <div id="status" class="status">Select a log file</div>
+
+            <h2>Navigation</h2>
+            <div class="history-section">
+                <div class="history-controls">
+                    <button onclick="historyFirst()" title="First">&laquo;</button>
+                    <button onclick="historyPrev()" title="Previous">&lsaquo;</button>
+                    <span id="historyPosition">- / -</span>
+                    <button onclick="historyNext()" title="Next">&rsaquo;</button>
+                    <button onclick="historyLast()" title="Last">&raquo;</button>
+                </div>
+                <input type="range" id="historySlider" min="0" max="0" value="0" oninput="historySeek(this.value)">
+                <div class="playback-controls">
+                    <button id="playBtn" onclick="togglePlayback()">Play</button>
+                    <select id="playbackSpeed" onchange="updatePlaybackSpeed()">
+                        <option value="1000">1x</option>
+                        <option value="500">2x</option>
+                        <option value="200" selected>5x</option>
+                        <option value="100">10x</option>
+                        <option value="50">20x</option>
+                    </select>
+                </div>
+                <div class="round-nav">
+                    <button onclick="roundPrev()" title="Previous Round">&lsaquo; Round</button>
+                    <span id="currentRound">-</span>
+                    <button onclick="roundNext()" title="Next Round">Round &rsaquo;</button>
+                </div>
+                <div id="roundMarkers" class="round-markers"></div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <canvas id="canvas" width="800" height="800"></canvas>
+            <div class="legend">
+                <div class="legend-item"><div class="legend-color" style="background:#4ecca3"></div> Your Bombers</div>
+                <div class="legend-item"><div class="legend-color" style="background:#ff6b6b"></div> Enemies</div>
+                <div class="legend-item"><div class="legend-color" style="background:#9b59b6"></div> Mobs</div>
+                <div class="legend-item"><div class="legend-color" style="background:#f39c12"></div> Bombs</div>
+                <div class="legend-item"><div class="legend-color" style="background:#7f8c8d"></div> Walls</div>
+                <div class="legend-item"><div class="legend-color" style="background:#795548"></div> Obstacles</div>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn()">Zoom +</button>
+                <button onclick="zoomOut()">Zoom -</button>
+                <button onclick="resetView()">Reset View</button>
+                <span class="zoom-info">Scroll to zoom, drag to pan</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="coords">
+        <span>X: <span id="coordX">-</span></span> |
+        <span>Y: <span id="coordY">-</span></span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameData = null;
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let dragStartX, dragStartY;
+
+        // History
+        let history = [];
+        let historyIndex = -1;
+        let roundMarkers = [];
+
+        // Playback
+        let playbackInterval = null;
+        let playbackSpeed = 200;
+
+        const colors = {
+            background: '#1a1a2e',
+            grid: '#2a2a4e',
+            bomber: '#4ecca3',
+            bomberDead: '#2a6652',
+            enemy: '#ff6b6b',
+            mob: '#9b59b6',
+            mobSleep: '#5e3370',
+            bomb: '#f39c12',
+            bombRadius: 'rgba(243, 156, 18, 0.2)',
+            wall: '#7f8c8d',
+            obstacle: '#795548'
+        };
+
+        function render() {
+            ctx.fillStyle = colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameData) {
+                ctx.fillStyle = '#888';
+                ctx.font = '20px Consolas';
+                ctx.textAlign = 'center';
+                ctx.fillText('Load .jsonl log file to view history', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const mapW = gameData.map_size[0];
+            const mapH = gameData.map_size[1];
+            const cellSize = Math.min(canvas.width / mapW, canvas.height / mapH) * scale;
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+
+            // Grid
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x <= mapW; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * cellSize, 0);
+                ctx.lineTo(x * cellSize, mapH * cellSize);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= mapH; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * cellSize);
+                ctx.lineTo(mapW * cellSize, y * cellSize);
+                ctx.stroke();
+            }
+
+            // Walls
+            ctx.fillStyle = colors.wall;
+            for (const [x, y] of gameData.arena.walls || []) {
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+
+            // Obstacles
+            ctx.fillStyle = colors.obstacle;
+            for (const [x, y] of gameData.arena.obstacles || []) {
+                ctx.fillRect(x * cellSize + 1, y * cellSize + 1, cellSize - 2, cellSize - 2);
+            }
+
+            // Bombs with radius
+            for (const bomb of gameData.arena.bombs || []) {
+                const [x, y] = bomb.pos || bomb;
+                const radius = bomb.radius || 2;
+
+                ctx.fillStyle = colors.bombRadius;
+                for (let i = 1; i <= radius; i++) {
+                    ctx.fillRect((x - i) * cellSize, y * cellSize, cellSize, cellSize);
+                    ctx.fillRect((x + i) * cellSize, y * cellSize, cellSize, cellSize);
+                    ctx.fillRect(x * cellSize, (y - i) * cellSize, cellSize, cellSize);
+                    ctx.fillRect(x * cellSize, (y + i) * cellSize, cellSize, cellSize);
+                }
+
+                ctx.fillStyle = colors.bomb;
+                ctx.beginPath();
+                ctx.arc((x + 0.5) * cellSize, (y + 0.5) * cellSize, cellSize * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (bomb.timer !== undefined) {
+                    ctx.fillStyle = '#000';
+                    ctx.font = `${cellSize * 0.4}px Consolas`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(bomb.timer, (x + 0.5) * cellSize, (y + 0.5) * cellSize);
+                }
+            }
+
+            // Mobs
+            for (const mob of gameData.mobs || []) {
+                const [x, y] = mob.pos || mob;
+                ctx.fillStyle = mob.is_sleeping ? colors.mobSleep : colors.mob;
+                ctx.beginPath();
+                ctx.moveTo((x + 0.5) * cellSize, y * cellSize + 2);
+                ctx.lineTo((x + 1) * cellSize - 2, (y + 1) * cellSize - 2);
+                ctx.lineTo(x * cellSize + 2, (y + 1) * cellSize - 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Enemies
+            for (const enemy of gameData.enemies || []) {
+                const [x, y] = enemy.pos || enemy;
+                ctx.fillStyle = colors.enemy;
+                ctx.beginPath();
+                ctx.arc((x + 0.5) * cellSize, (y + 0.5) * cellSize, cellSize * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Bombers
+            for (const bomber of gameData.bombers || []) {
+                const [x, y] = bomber.pos;
+                const cx = (x + 0.5) * cellSize;
+                const cy = (y + 0.5) * cellSize;
+
+                if (bomber.alive) {
+                    ctx.fillStyle = colors.bomber;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, cellSize * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (bomber.armor > 0) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, cellSize * 0.45, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
+                    if (bomber.bombs_available > 0) {
+                        ctx.fillStyle = '#000';
+                        ctx.font = `bold ${cellSize * 0.35}px Consolas`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(bomber.bombs_available, cx, cy);
+                    }
+                } else {
+                    ctx.fillStyle = colors.bomberDead;
+                    ctx.globalAlpha = 0.5;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, cellSize * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+
+                    ctx.strokeStyle = '#ff4444';
+                    ctx.lineWidth = 2;
+                    const s = cellSize * 0.25;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - s, cy - s);
+                    ctx.lineTo(cx + s, cy + s);
+                    ctx.moveTo(cx + s, cy - s);
+                    ctx.lineTo(cx - s, cy + s);
+                    ctx.stroke();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function updateInfo() {
+            if (!gameData) return;
+
+            document.getElementById('playerName').textContent = gameData.player || '-';
+            document.getElementById('roundName').textContent = gameData.round || '-';
+            document.getElementById('mapSize').textContent = gameData.map_size ? `${gameData.map_size[0]}x${gameData.map_size[1]}` : '-';
+            document.getElementById('score').textContent = gameData.raw_score || 0;
+            document.getElementById('iteration').textContent = gameData._iteration !== undefined ? gameData._iteration : '-';
+
+            document.getElementById('obstaclesCount').textContent = gameData.arena?.obstacles?.length || 0;
+            document.getElementById('wallsCount').textContent = gameData.arena?.walls?.length || 0;
+            document.getElementById('bombsCount').textContent = gameData.arena?.bombs?.length || 0;
+            document.getElementById('enemiesCount').textContent = gameData.enemies?.length || 0;
+            document.getElementById('mobsCount').textContent = gameData.mobs?.length || 0;
+
+            const actionsMap = {};
+            for (const action of gameData._actions || []) {
+                actionsMap[action.id] = action;
+            }
+
+            const bombersList = document.getElementById('bombersList');
+            bombersList.innerHTML = '';
+            for (const bomber of gameData.bombers || []) {
+                const card = document.createElement('div');
+                card.className = `bomber-card ${bomber.alive ? '' : 'dead'}`;
+                const status = bomber.alive ? '●' : '✕';
+                const statusColor = bomber.alive ? '#4ecca3' : '#ff4444';
+
+                const action = actionsMap[bomber.id];
+                const reason = action?.reason || '-';
+                const reasonColors = {
+                    'ESCAPE': '#ff6b6b',
+                    'BOMB_HERE': '#f39c12',
+                    'BOMB_NEXT': '#f39c12',
+                    'BOMB_TARGET': '#f39c12',
+                    'MOVE_TO_OBSTACLE': '#3498db',
+                    'WAIT_FOR_BOMB': '#2ecc71',
+                    'PATROL': '#1abc9c',
+                    'IDLE': '#888',
+                    'DEAD': '#666',
+                    'MOVING': '#9b59b6'
+                };
+                const reasonColor = reasonColors[reason] || '#888';
+
+                card.innerHTML = `
+                    <div class="bomber-id">
+                        <span style="color:${statusColor}">${status}</span>
+                        ${bomber.id.slice(0, 8)}...
+                        <span style="color:${reasonColor};float:right;font-weight:bold">${reason}</span>
+                    </div>
+                    <div class="bomber-stats">
+                        <span class="stat">Pos: ${bomber.pos[0]},${bomber.pos[1]}</span>
+                        <span class="stat">Bombs: ${bomber.bombs_available}</span>
+                        <span class="stat">Armor: ${bomber.armor}</span>
+                    </div>
+                `;
+                bombersList.appendChild(card);
+            }
+        }
+
+        const API_BASE = 'http://localhost:8888';
+        let currentFile = null;
+
+        function setStatus(message, type = '') {
+            const el = document.getElementById('status');
+            el.textContent = message;
+            el.className = 'status ' + type;
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        async function refreshFileList() {
+            const container = document.getElementById('fileList');
+            container.innerHTML = '<div style="color:#888;padding:5px">Loading...</div>';
+
+            try {
+                const response = await fetch(API_BASE + '/logs');
+                if (!response.ok) throw new Error('Failed to fetch');
+                const files = await response.json();
+
+                if (files.length === 0) {
+                    container.innerHTML = '<div style="color:#888;padding:5px">No log files found</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                for (const file of files) {
+                    const el = document.createElement('div');
+                    el.className = 'file-item' + (file.name === currentFile ? ' active' : '');
+                    el.innerHTML = `
+                        <div>${file.name.replace('datsjinglebang-', '')}</div>
+                        <div style="color:#888;font-size:0.75em">${formatSize(file.size)}</div>
+                    `;
+                    el.onclick = () => loadRemoteFile(file.name);
+                    container.appendChild(el);
+                }
+            } catch (e) {
+                container.innerHTML = '<div style="color:#ff6b6b;padding:5px">Bot not running. Use "Open .jsonl" button.</div>';
+            }
+        }
+
+        async function loadRemoteFile(filename) {
+            setStatus('Loading ' + filename + '...', '');
+
+            try {
+                const response = await fetch(API_BASE + '/logs/' + filename);
+                if (!response.ok) throw new Error('Failed to fetch');
+                const content = await response.text();
+                currentFile = filename;
+                loadJsonlContent(content, filename);
+                refreshFileList(); // Update active state
+            } catch (e) {
+                setStatus('Error: ' + e.message, 'error');
+            }
+        }
+
+        function loadLocalFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            setStatus('Loading...', '');
+            currentFile = null;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                loadJsonlContent(e.target.result, file.name);
+                refreshFileList();
+            };
+            reader.readAsText(file);
+        }
+
+        function loadJsonlContent(content, filename) {
+            stopPlayback();
+
+            history = [];
+            historyIndex = -1;
+            roundMarkers = [];
+
+            const lines = content.trim().split('\n');
+            let loadedCount = 0;
+            let lastRound = null;
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const entry = JSON.parse(line);
+                    const arenaData = entry.arena;
+                    if (!arenaData || !arenaData.map_size) continue;
+
+                    arenaData._iteration = entry.iteration;
+                    arenaData._actions = entry.actions || [];
+                    arenaData._timestamp = entry.timestamp;
+
+                    const currentRound = arenaData.round;
+                    if (currentRound && currentRound !== lastRound) {
+                        roundMarkers.push({ index: history.length, round: currentRound });
+                        lastRound = currentRound;
+                    }
+
+                    history.push(arenaData);
+                    loadedCount++;
+                } catch (e) {
+                    console.warn('Failed to parse line:', e);
+                }
+            }
+
+            if (loadedCount > 0) {
+                historyIndex = 0;
+                gameData = history[0];
+                resetView();
+                updateInfo();
+                updateHistoryUI();
+                updateRoundMarkersUI();
+                setStatus(`Loaded ${loadedCount} iterations from ${filename}`, 'success');
+            } else {
+                setStatus(`No valid data in ${filename}`, 'error');
+            }
+        }
+
+        function updateHistoryUI() {
+            const slider = document.getElementById('historySlider');
+            const position = document.getElementById('historyPosition');
+            slider.max = Math.max(0, history.length - 1);
+            slider.value = historyIndex;
+
+            if (history.length > 0 && historyIndex >= 0) {
+                const currentData = history[historyIndex];
+                const iter = currentData._iteration !== undefined ? currentData._iteration : historyIndex;
+                const lastData = history[history.length - 1];
+                const lastIter = lastData._iteration !== undefined ? lastData._iteration : history.length - 1;
+                position.textContent = `iter ${iter} / ${lastIter}`;
+            } else {
+                position.textContent = '- / -';
+            }
+        }
+
+        function displayFrame(index) {
+            if (index < 0 || index >= history.length) return;
+            historyIndex = index;
+            gameData = history[historyIndex];
+            render();
+            updateInfo();
+            updateHistoryUI();
+            updateCurrentRoundDisplay();
+        }
+
+        function historySeek(index) {
+            displayFrame(parseInt(index));
+        }
+
+        function historyPrev() {
+            if (historyIndex > 0) displayFrame(historyIndex - 1);
+        }
+
+        function historyNext() {
+            if (historyIndex < history.length - 1) displayFrame(historyIndex + 1);
+        }
+
+        function historyFirst() {
+            if (history.length > 0) displayFrame(0);
+        }
+
+        function historyLast() {
+            if (history.length > 0) displayFrame(history.length - 1);
+        }
+
+        // Playback
+        function togglePlayback() {
+            if (playbackInterval) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        }
+
+        function startPlayback() {
+            if (history.length === 0) return;
+
+            const btn = document.getElementById('playBtn');
+            btn.classList.add('playing');
+            btn.textContent = 'Pause';
+
+            playbackInterval = setInterval(() => {
+                if (historyIndex < history.length - 1) {
+                    displayFrame(historyIndex + 1);
+                } else {
+                    stopPlayback();
+                }
+            }, playbackSpeed);
+        }
+
+        function stopPlayback() {
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+            }
+            const btn = document.getElementById('playBtn');
+            btn.classList.remove('playing');
+            btn.textContent = 'Play';
+        }
+
+        function updatePlaybackSpeed() {
+            playbackSpeed = parseInt(document.getElementById('playbackSpeed').value);
+            if (playbackInterval) {
+                stopPlayback();
+                startPlayback();
+            }
+        }
+
+        // Round navigation
+        function updateRoundMarkersUI() {
+            const container = document.getElementById('roundMarkers');
+            container.innerHTML = '';
+
+            for (let i = 0; i < roundMarkers.length; i++) {
+                const marker = roundMarkers[i];
+                const el = document.createElement('span');
+                el.className = 'round-marker';
+                const data = history[marker.index];
+                const iter = data?._iteration !== undefined ? data._iteration : marker.index;
+                el.textContent = marker.round.replace('datsjinglebang-', '');
+                el.title = `${marker.round} (iter ${iter})`;
+                el.onclick = () => jumpToRound(i);
+                container.appendChild(el);
+            }
+
+            updateCurrentRoundDisplay();
+        }
+
+        function updateCurrentRoundDisplay() {
+            const currentRoundEl = document.getElementById('currentRound');
+            if (history.length === 0 || historyIndex < 0) {
+                currentRoundEl.textContent = '-';
+                return;
+            }
+
+            const currentRound = history[historyIndex]?.round || '-';
+            currentRoundEl.textContent = currentRound.replace('datsjinglebang-', '');
+
+            document.querySelectorAll('.round-marker').forEach((el, i) => {
+                const isActive = roundMarkers[i] && historyIndex >= roundMarkers[i].index &&
+                    (i === roundMarkers.length - 1 || historyIndex < roundMarkers[i + 1].index);
+                el.classList.toggle('active', isActive);
+            });
+        }
+
+        function jumpToRound(markerIndex) {
+            if (markerIndex >= 0 && markerIndex < roundMarkers.length) {
+                displayFrame(roundMarkers[markerIndex].index);
+            }
+        }
+
+        function roundPrev() {
+            for (let i = roundMarkers.length - 1; i >= 0; i--) {
+                if (roundMarkers[i].index < historyIndex) {
+                    jumpToRound(i);
+                    return;
+                }
+            }
+        }
+
+        function roundNext() {
+            for (let i = 0; i < roundMarkers.length; i++) {
+                if (roundMarkers[i].index > historyIndex) {
+                    jumpToRound(i);
+                    return;
+                }
+            }
+        }
+
+        // Zoom/Pan
+        function zoomIn() { scale *= 1.2; render(); }
+        function zoomOut() { scale /= 1.2; render(); }
+        function resetView() { scale = 1; offsetX = 0; offsetY = 0; render(); }
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            offsetX = mouseX - (mouseX - offsetX) * factor;
+            offsetY = mouseY - (mouseY - offsetY) * factor;
+            scale *= factor;
+            render();
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            dragStartX = e.clientX - offsetX;
+            dragStartY = e.clientY - offsetY;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (gameData) {
+                const mapW = gameData.map_size[0];
+                const mapH = gameData.map_size[1];
+                const cellSize = Math.min(canvas.width / mapW, canvas.height / mapH) * scale;
+                const mapX = Math.floor((x - offsetX) / cellSize);
+                const mapY = Math.floor((y - offsetY) / cellSize);
+                document.getElementById('coordX').textContent = mapX;
+                document.getElementById('coordY').textContent = mapY;
+            }
+
+            if (isDragging) {
+                offsetX = e.clientX - dragStartX;
+                offsetY = e.clientY - dragStartY;
+                render();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    historyPrev();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    historyNext();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    historyFirst();
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    historyLast();
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    togglePlayback();
+                    break;
+            }
+        });
+
+        render();
+        refreshFileList();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DatsJingleBang - Live</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Consolas', monospace;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .left-panel {
+            flex: 0 0 300px;
+        }
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #e94560;
+        }
+        h1 a {
+            color: #4ecca3;
+            text-decoration: none;
+            font-size: 0.6em;
+            margin-left: 10px;
+        }
+        h1 a:hover { text-decoration: underline; }
+        h2 {
+            font-size: 1.1em;
+            margin: 15px 0 10px;
+            color: #0f3460;
+            background: #e94560;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #0f3460;
+        }
+        .info-label { color: #888; }
+        .info-value { color: #4ecca3; font-weight: bold; }
+        .bomber-card {
+            background: #0f3460;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 0.85em;
+        }
+        .bomber-card.dead { opacity: 0.5; }
+        .bomber-id { color: #e94560; font-size: 0.75em; }
+        .bomber-number {
+            color: #4ecca3;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-right: 5px;
+        }
+        .bomber-stats { display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap; }
+        .bomber-upgrades {
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px solid #1a1a2e;
+            font-size: 0.75em;
+            color: #888;
+        }
+        .upgrade-item {
+            display: inline-block;
+            background: #1a1a2e;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 3px;
+            color: #4ecca3;
+        }
+        .stat { color: #4ecca3; }
+        #canvas {
+            border: 2px solid #e94560;
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85em;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover { background: #ff6b6b; }
+        .zoom-info { color: #888; font-size: 0.85em; }
+        .coords {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #16213e;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .api-section { display: flex; flex-direction: column; gap: 8px; }
+        .api-input {
+            width: 100%;
+            background: #0f3460;
+            border: 1px solid #e94560;
+            color: #eee;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 0.85em;
+        }
+        .api-input:focus { outline: none; border-color: #4ecca3; }
+        .api-status {
+            font-size: 0.8em;
+            padding: 5px;
+            border-radius: 4px;
+            min-height: 20px;
+        }
+        .api-status.success { color: #4ecca3; }
+        .api-status.error { color: #ff6b6b; }
+        .api-status.loading { color: #f39c12; }
+        #autoRefreshBtn.active { background: #4ecca3; }
+        .iteration-big {
+            font-size: 2em;
+            color: #4ecca3;
+            text-align: center;
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel left-panel">
+            <h1>Live <a href="history.html">History</a></h1>
+
+            <div class="iteration-big">
+                <span id="iteration">-</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Player:</span>
+                <span class="info-value" id="playerName">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Round:</span>
+                <span class="info-value" id="roundName">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Started:</span>
+                <span class="info-value" id="roundStarted">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Map Size:</span>
+                <span class="info-value" id="mapSize">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Score:</span>
+                <span class="info-value" id="score">-</span>
+            </div>
+
+            <h2>Bombers</h2>
+            <div id="bombersList"></div>
+
+            <h2>Upgrades</h2>
+            <div class="info-row">
+                <span class="info-label">Skill Points:</span>
+                <span class="info-value" id="skillPoints">0</span>
+            </div>
+            <div class="info-row" style="font-size: 0.85em; color: #888;">
+                <span class="info-label">Earned:</span>
+                <span class="info-value" id="skillEarned">0</span>
+            </div>
+            <div class="info-row" style="font-size: 0.85em; color: #888;">
+                <span class="info-label">Spent:</span>
+                <span class="info-value" id="skillSpent">0</span>
+            </div>
+            <div id="upgradesList" style="font-size: 0.85em; margin-top: 5px;"></div>
+
+            <h2>Stats</h2>
+            <div class="info-row">
+                <span class="info-label">Obstacles:</span>
+                <span class="info-value" id="obstaclesCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Walls:</span>
+                <span class="info-value" id="wallsCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Bombs:</span>
+                <span class="info-value" id="bombsCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Enemies:</span>
+                <span class="info-value" id="enemiesCount">0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Mobs:</span>
+                <span class="info-value" id="mobsCount">0</span>
+            </div>
+
+            <h2>Memory (Fog of War)</h2>
+            <div class="info-row">
+                <span class="info-label">Explored:</span>
+                <span class="info-value" id="exploredPct">0%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">View Radius:</span>
+                <span class="info-value" id="viewRadius">5</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Remembered:</span>
+                <span class="info-value" id="rememberedCount">0</span>
+            </div>
+            <div class="controls" style="margin-top:5px">
+                <button onclick="toggleFog()" id="fogBtn" style="background:#4ecca3">Fog: ON</button>
+            </div>
+
+            <h2>Data Source</h2>
+            <div class="api-section">
+                <select id="dataSource" class="api-input" onchange="onDataSourceChange()">
+                    <option value="bot">Local Bot (localhost:8888)</option>
+                    <option value="api">Direct API</option>
+                </select>
+                <div id="apiSettings" style="display:none">
+                    <select id="apiServer" class="api-input">
+                        <option value="https://games-test.datsteam.dev">Test Server</option>
+                        <option value="https://games.datsteam.dev">Production</option>
+                    </select>
+                    <input type="text" id="apiToken" class="api-input" placeholder="X-Auth-Token" value="">
+                </div>
+                <div class="controls">
+                    <button onclick="fetchData()">Fetch</button>
+                    <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">Auto (100ms)</button>
+                </div>
+                <div id="apiStatus" class="api-status"></div>
+            </div>
+        </div>
+
+        <div class="panel right-panel">
+            <canvas id="canvas" width="800" height="800"></canvas>
+            <div class="legend" style="font-size: 13px; line-height: 1.8;">
+                <div style="font-weight: bold; margin-bottom: 8px; color: #4ecca3; font-size: 14px;">LEGEND</div>
+
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #4ecca3; font-size: 12px;">Units:</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#4ecca3"></div> Your Bombers</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#ff6b6b"></div> Enemy Players</div>
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #4ecca3; font-size: 12px;">Mobs (NPC):</div>
+                    <div class="legend-item">
+                        <div style="width:20px; height:20px; display:inline-block; vertical-align:middle;">
+                            <svg width="20" height="20">
+                                <polygon points="10,3 16,17 4,17" fill="#9b59b6"/>
+                            </svg>
+                        </div>
+                        Active (deadly)
+                    </div>
+                    <div class="legend-item">
+                        <div style="width:20px; height:20px; display:inline-block; vertical-align:middle;">
+                            <svg width="20" height="20">
+                                <circle cx="10" cy="10" r="4" fill="#5e3370"/>
+                            </svg>
+                        </div>
+                        Sleeping (safe)
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 10px;">
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #4ecca3; font-size: 12px;">Objects:</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#f39c12"></div> Bombs</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#795548"></div> Obstacles</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#7f8c8d"></div> Walls</div>
+                </div>
+
+                <div>
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #4ecca3; font-size: 12px;">Fog of War:</div>
+                    <div class="legend-item"><div class="legend-color" style="background:rgba(0,0,0,0.7)"></div> Unexplored</div>
+                    <div class="legend-item"><div class="legend-color" style="background:rgba(30,30,60,0.5)"></div> Out of view</div>
+                </div>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn()">Zoom +</button>
+                <button onclick="zoomOut()">Zoom -</button>
+                <button onclick="resetView()">Reset View</button>
+                <span class="zoom-info">Scroll to zoom, drag to pan</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="coords">
+        <span>X: <span id="coordX">-</span></span> |
+        <span>Y: <span id="coordY">-</span></span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameData = null;
+        let roundStartTime = null;  // Время начала раунда для вычисления skill_points
+        let currentRoundName = null;  // Отслеживание смены раунда
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let autoRefreshInterval = null;
+
+        let showFog = true;  // Переключатель тумана войны
+
+        const colors = {
+            background: '#1a1a2e',
+            grid: '#2a2a4e',
+            bomber: '#4ecca3',
+            bomberDead: '#2a6652',
+            enemy: '#ff6b6b',
+            mob: '#9b59b6',
+            mobSleep: '#5e3370',
+            mobPatrol: '#9b59b6',    // Фиолетовый - патрульный
+            mobHunter: '#e74c3c',    // Красный - охотник
+            mobGuard: '#f39c12',     // Оранжевый - охранник
+            bomb: '#f39c12',
+            bombRadius: 'rgba(243, 156, 18, 0.2)',
+            wall: '#7f8c8d',
+            obstacle: '#795548',
+            fog: 'rgba(0, 0, 0, 0.7)',           // Неразведанные клетки
+            explored: 'rgba(30, 30, 60, 0.3)',   // Разведанные, но не видимые сейчас
+            visible: 'rgba(78, 204, 163, 0.1)'  // Текущая зона видимости
+        };
+
+        function render() {
+            ctx.fillStyle = colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameData) {
+                ctx.fillStyle = '#888';
+                ctx.font = '20px Consolas';
+                ctx.textAlign = 'center';
+                ctx.fillText('Waiting for data from bot...', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const mapW = gameData.map_size[0];
+            const mapH = gameData.map_size[1];
+            const cellSize = Math.min(canvas.width / mapW, canvas.height / mapH) * scale;
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+
+            // Grid
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x <= mapW; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * cellSize, 0);
+                ctx.lineTo(x * cellSize, mapH * cellSize);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= mapH; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * cellSize);
+                ctx.lineTo(mapW * cellSize, y * cellSize);
+                ctx.stroke();
+            }
+
+            // Walls
+            ctx.fillStyle = colors.wall;
+            for (const [x, y] of gameData.arena.walls || []) {
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+
+            // Obstacles
+            ctx.fillStyle = colors.obstacle;
+            for (const [x, y] of gameData.arena.obstacles || []) {
+                ctx.fillRect(x * cellSize + 1, y * cellSize + 1, cellSize - 2, cellSize - 2);
+            }
+
+            // Bombs with radius
+            for (const bomb of gameData.arena.bombs || []) {
+                const [x, y] = bomb.pos || bomb;
+                const radius = bomb.range || 1;
+
+                ctx.fillStyle = colors.bombRadius;
+                for (let i = 1; i <= radius; i++) {
+                    ctx.fillRect((x - i) * cellSize, y * cellSize, cellSize, cellSize);
+                    ctx.fillRect((x + i) * cellSize, y * cellSize, cellSize, cellSize);
+                    ctx.fillRect(x * cellSize, (y - i) * cellSize, cellSize, cellSize);
+                    ctx.fillRect(x * cellSize, (y + i) * cellSize, cellSize, cellSize);
+                }
+
+                ctx.fillStyle = colors.bomb;
+                ctx.beginPath();
+                ctx.arc((x + 0.5) * cellSize, (y + 0.5) * cellSize, cellSize * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (bomb.timer !== undefined) {
+                    ctx.fillStyle = '#000';
+                    ctx.font = `${cellSize * 0.4}px Consolas`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(bomb.timer, (x + 0.5) * cellSize, (y + 0.5) * cellSize);
+                }
+            }
+
+            // Mobs - разные формы для разных типов
+            for (const mob of gameData.mobs || []) {
+                const [x, y] = mob.pos || mob;
+                const cx = (x + 0.5) * cellSize;
+                const cy = (y + 0.5) * cellSize;
+                const mobType = mob.type || 'patrol';
+
+                // Выбор цвета
+                let color = colors.mob;
+                if (mob.is_sleeping) {
+                    color = colors.mobSleep;
+                } else if (mobType === 'patrol') {
+                    color = colors.mobPatrol;
+                } else if (mobType === 'hunter') {
+                    color = colors.mobHunter;
+                } else if (mobType === 'guard') {
+                    color = colors.mobGuard;
+                }
+
+                ctx.fillStyle = color;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+
+                // Разные формы для разных типов
+                if (mob.is_sleeping) {
+                    // Спящий - маленький круг
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, cellSize * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (mobType === 'hunter') {
+                    // Hunter - острый треугольник (направлен вверх)
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - cellSize * 0.4);
+                    ctx.lineTo(cx + cellSize * 0.35, cy + cellSize * 0.3);
+                    ctx.lineTo(cx - cellSize * 0.35, cy + cellSize * 0.3);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (mobType === 'guard') {
+                    // Guard - квадрат
+                    const size = cellSize * 0.35;
+                    ctx.fillRect(cx - size, cy - size, size * 2, size * 2);
+                } else {
+                    // Patrol (default) - треугольник
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - cellSize * 0.35);
+                    ctx.lineTo(cx + cellSize * 0.3, cy + cellSize * 0.25);
+                    ctx.lineTo(cx - cellSize * 0.3, cy + cellSize * 0.25);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // Добавим метку типа (маленький текст)
+                if (!mob.is_sleeping) {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = `${Math.max(8, cellSize * 0.15)}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    const label = mobType[0].toUpperCase(); // P, H, G
+                    ctx.fillText(label, cx, cy + cellSize * 0.35);
+                }
+            }
+
+            // Enemies - простые красные круги
+            for (const enemy of gameData.enemies || []) {
+                const [x, y] = enemy.pos || enemy;
+                const cx = (x + 0.5) * cellSize;
+                const cy = (y + 0.5) * cellSize;
+
+                // Рисуем красный круг
+                ctx.fillStyle = colors.enemy;
+                ctx.beginPath();
+                ctx.arc(cx, cy, cellSize * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Bombers
+            for (const bomber of gameData.bombers || []) {
+                const [x, y] = bomber.pos;
+                const cx = (x + 0.5) * cellSize;
+                const cy = (y + 0.5) * cellSize;
+
+                if (bomber.alive) {
+                    ctx.fillStyle = colors.bomber;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, cellSize * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (bomber.armor > 0) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, cellSize * 0.45, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
+                    if (bomber.bombs_available > 0) {
+                        ctx.fillStyle = '#000';
+                        ctx.font = `bold ${cellSize * 0.35}px Consolas`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(bomber.bombs_available, cx, cy);
+                    }
+                } else {
+                    ctx.fillStyle = colors.bomberDead;
+                    ctx.globalAlpha = 0.5;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, cellSize * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+
+                    ctx.strokeStyle = '#ff4444';
+                    ctx.lineWidth = 2;
+                    const s = cellSize * 0.25;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - s, cy - s);
+                    ctx.lineTo(cx + s, cy + s);
+                    ctx.moveTo(cx + s, cy - s);
+                    ctx.lineTo(cx - s, cy + s);
+                    ctx.stroke();
+                }
+            }
+
+            // Fog of War (рисуем поверх всего)
+            if (showFog && gameData._memory) {
+                const memory = gameData._memory;
+
+                // Создаём Set для быстрого поиска
+                const visibleSet = new Set();
+                const exploredSet = new Set();
+
+                for (const [x, y] of memory.visible_cells || []) {
+                    visibleSet.add(`${x},${y}`);
+                }
+                for (const [x, y] of memory.explored || []) {
+                    exploredSet.add(`${x},${y}`);
+                }
+
+                // Рисуем туман для неразведанных клеток
+                for (let x = 0; x < mapW; x++) {
+                    for (let y = 0; y < mapH; y++) {
+                        const key = `${x},${y}`;
+
+                        if (!exploredSet.has(key)) {
+                            // Неразведанная клетка - густой туман
+                            ctx.fillStyle = colors.fog;
+                            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                        } else if (!visibleSet.has(key)) {
+                            // Разведанная, но не видимая сейчас - лёгкая тень
+                            ctx.fillStyle = colors.explored;
+                            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                        }
+                        // Видимые клетки - без тумана
+                    }
+                }
+
+                // Рисуем границу зоны видимости
+                ctx.strokeStyle = 'rgba(78, 204, 163, 0.5)';
+                ctx.lineWidth = 1;
+                for (const [x, y] of memory.visible_cells || []) {
+                    const key = `${x},${y}`;
+                    // Проверяем соседей - если сосед не видим, рисуем границу
+                    if (!visibleSet.has(`${x-1},${y}`)) {
+                        ctx.beginPath();
+                        ctx.moveTo(x * cellSize, y * cellSize);
+                        ctx.lineTo(x * cellSize, (y + 1) * cellSize);
+                        ctx.stroke();
+                    }
+                    if (!visibleSet.has(`${x+1},${y}`)) {
+                        ctx.beginPath();
+                        ctx.moveTo((x + 1) * cellSize, y * cellSize);
+                        ctx.lineTo((x + 1) * cellSize, (y + 1) * cellSize);
+                        ctx.stroke();
+                    }
+                    if (!visibleSet.has(`${x},${y-1}`)) {
+                        ctx.beginPath();
+                        ctx.moveTo(x * cellSize, y * cellSize);
+                        ctx.lineTo((x + 1) * cellSize, y * cellSize);
+                        ctx.stroke();
+                    }
+                    if (!visibleSet.has(`${x},${y+1}`)) {
+                        ctx.beginPath();
+                        ctx.moveTo(x * cellSize, (y + 1) * cellSize);
+                        ctx.lineTo((x + 1) * cellSize, (y + 1) * cellSize);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            ctx.restore();
+        }
+
+        async function loadRoundStartTime(roundName) {
+            if (!roundName || roundName === '-') return null;
+
+            try {
+                const response = await fetch(`http://localhost:8888/round-start/${roundName}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.start_time) {
+                        return new Date(data.start_time);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load round start time:', e);
+            }
+            return null;
+        }
+
+        function calculateSkillPoints(startTime) {
+            if (!startTime) return 0;
+            const elapsed = (Date.now() - startTime.getTime()) / 1000;  // секунды
+            return Math.min(Math.floor(elapsed / 90), 10);  // max 10 за раунд
+        }
+
+        function calculateSpentSkillPoints(boosters) {
+            if (!boosters) return 0;
+
+            // Только настоящие апгрейды и их стоимость за уровень
+            const upgrades = {
+                'bomb_count': 1,    // +1 карман для бомб
+                'bomb_range': 1,    // +1 дальность взрыва
+                'speed': 1,         // +1 скорость (max 3)
+                'armor': 1,         // +1 броня
+                'bomb_delay': 1,    // -2 сек до взрыва (max 3)
+                'vision': 1,        // +3 видимость
+                'passability': 2,   // проходимость (max 3)
+                'bomber_count': 2   // +1 юнит
+            };
+
+            let spent = 0;
+            for (const [name, cost] of Object.entries(upgrades)) {
+                const level = boosters[name];
+                // Уровень должен быть числом от 1 до 10 (не базовые значения типа 8000)
+                if (typeof level === 'number' && level >= 1 && level <= 10) {
+                    spent += level * cost;
+                }
+            }
+            return spent;
+        }
+
+        function updateInfo() {
+            if (!gameData) return;
+
+            document.getElementById('playerName').textContent = gameData.player || '-';
+            document.getElementById('roundName').textContent = gameData.round || '-';
+
+            // Отображение времени начала раунда
+            if (roundStartTime) {
+                const timeStr = roundStartTime.toLocaleTimeString('ru-RU');
+                document.getElementById('roundStarted').textContent = timeStr;
+            } else {
+                document.getElementById('roundStarted').textContent = '-';
+            }
+
+            document.getElementById('mapSize').textContent = gameData.map_size ? `${gameData.map_size[0]}x${gameData.map_size[1]}` : '-';
+            document.getElementById('score').textContent = gameData.raw_score || 0;
+            document.getElementById('iteration').textContent = gameData._iteration !== undefined ? gameData._iteration : '-';
+
+            document.getElementById('obstaclesCount').textContent = gameData.arena?.obstacles?.length || 0;
+            document.getElementById('wallsCount').textContent = gameData.arena?.walls?.length || 0;
+            document.getElementById('bombsCount').textContent = gameData.arena?.bombs?.length || 0;
+            document.getElementById('enemiesCount').textContent = gameData.enemies?.length || 0;
+            document.getElementById('mobsCount').textContent = gameData.mobs?.length || 0;
+
+            // Upgrades section
+            const boosters = gameData.boosters || {};
+
+            // Вычисляем заработанные skill_points на основе времени (max 10 за раунд)
+            let earnedSkillPoints = Math.min(gameData.skill_points || 0, 10);
+            if (roundStartTime) {
+                earnedSkillPoints = calculateSkillPoints(roundStartTime);  // уже ограничен до 10
+            }
+            // Если есть значение из лога - используем его (с ограничением)
+            if (gameData.skill_points !== undefined && gameData.skill_points > 0) {
+                earnedSkillPoints = Math.min(gameData.skill_points, 10);
+            }
+
+            // Вычисляем потраченные skill_points
+            let spentSkillPoints = calculateSpentSkillPoints(boosters);
+            // Потраченные не могут быть больше заработанных
+            spentSkillPoints = Math.min(spentSkillPoints, earnedSkillPoints);
+
+            // Доступные = заработанные - потраченные
+            const availableSkillPoints = earnedSkillPoints - spentSkillPoints;
+
+            // Обновляем отображение
+            document.getElementById('skillPoints').textContent = availableSkillPoints;
+            document.getElementById('skillEarned').textContent = earnedSkillPoints;
+            document.getElementById('skillSpent').textContent = spentSkillPoints;
+
+            const upgradesList = document.getElementById('upgradesList');
+            // Все апгрейды в порядке приоритета покупки
+            const allUpgrades = [
+                { key: 'bomb_delay', name: '⏱️ Delay', max: 3 },
+                { key: 'bomb_count', name: '💣 Bombs', max: 99 },
+                { key: 'passability', name: '🤸 Acrobat', max: 3 },
+                { key: 'bomb_range', name: '💥 Range', max: 99 },
+                { key: 'armor', name: '🛡️ Armor', max: 99 },
+                { key: 'speed', name: '⚡ Speed', max: 3 },
+                { key: 'vision', name: '👁️ Vision', max: 99 },
+                { key: 'bomber_count', name: '👥 Bombers', max: 99 }
+            ];
+
+            // Показываем все апгрейды
+            let upgradesHtml = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px;">';
+            for (const upgrade of allUpgrades) {
+                const value = boosters[upgrade.key] || 0;
+                const color = value > 0 ? '#4ecca3' : '#555';
+                const maxStr = upgrade.max < 99 ? `/${upgrade.max}` : '';
+                upgradesHtml += `<div style="padding: 1px 0; font-size: 0.85em;">
+                    <span style="color: #888;">${upgrade.name}:</span>
+                    <span style="color: ${color}; font-weight: bold;">${value}${maxStr}</span>
+                </div>`;
+            }
+            upgradesHtml += '</div>';
+            upgradesList.innerHTML = upgradesHtml;
+
+            // Memory stats
+            if (gameData._memory) {
+                const mem = gameData._memory;
+                const pct = mem.total_cells > 0 ? (mem.explored_cells / mem.total_cells * 100).toFixed(1) : 0;
+                document.getElementById('exploredPct').textContent = `${pct}% (${mem.explored_cells}/${mem.total_cells})`;
+                document.getElementById('viewRadius').textContent = mem.view_radius || 5;
+                document.getElementById('rememberedCount').textContent =
+                    `${mem.remembered_obstacles} obs, ${mem.remembered_enemies} enemies, ${mem.remembered_mobs} mobs`;
+            }
+
+            const actionsMap = {};
+            for (const action of gameData._actions || []) {
+                actionsMap[action.id] = action;
+            }
+
+            const bombersList = document.getElementById('bombersList');
+            bombersList.innerHTML = '';
+
+            for (let i = 0; i < (gameData.bombers || []).length; i++) {
+                const bomber = gameData.bombers[i];
+                const card = document.createElement('div');
+                card.className = `bomber-card ${bomber.alive ? '' : 'dead'}`;
+                const status = bomber.alive ? '●' : '✕';
+                const statusColor = bomber.alive ? '#4ecca3' : '#ff4444';
+
+                const action = actionsMap[bomber.id];
+                const reason = action?.reason || '-';
+                const reasonColors = {
+                    'ESCAPE': '#ff6b6b',
+                    'BOMB_HERE': '#f39c12',
+                    'BOMB_NEXT': '#f39c12',
+                    'BOMB_TARGET': '#f39c12',
+                    'MOVE_TO_OBSTACLE': '#3498db',
+                    'WAIT_FOR_BOMB': '#2ecc71',
+                    'PATROL': '#1abc9c',
+                    'EXPLORE': '#00bcd4',
+                    'IDLE': '#888',
+                    'DEAD': '#666',
+                    'MOVING': '#9b59b6'
+                };
+                const reasonColor = reasonColors[reason] || '#888';
+
+                card.innerHTML = `
+                    <div class="bomber-id">
+                        <span class="bomber-number">#${i + 1}</span>
+                        <span style="color:${statusColor}">${status}</span>
+                        ${bomber.id.slice(0, 8)}...
+                        <span style="color:${reasonColor};float:right;font-weight:bold">${reason}</span>
+                    </div>
+                    <div class="bomber-stats">
+                        <span class="stat">Pos: ${bomber.pos[0]},${bomber.pos[1]}</span>
+                        <span class="stat">Bombs: ${bomber.bombs_available}</span>
+                        <span class="stat">Armor: ${bomber.armor}</span>
+                    </div>
+                `;
+                bombersList.appendChild(card);
+            }
+        }
+
+        function setApiStatus(message, type) {
+            const status = document.getElementById('apiStatus');
+            status.textContent = message;
+            status.className = 'api-status ' + type;
+        }
+
+        function onDataSourceChange() {
+            const source = document.getElementById('dataSource').value;
+            document.getElementById('apiSettings').style.display = source === 'api' ? 'block' : 'none';
+        }
+
+        async function fetchFromBot() {
+            try {
+                const response = await fetch('http://localhost:8888/arena');
+                if (!response.ok) {
+                    setApiStatus(`Bot error: ${response.status}`, 'error');
+                    return null;
+                }
+                return await response.json();
+            } catch (e) {
+                setApiStatus(`Bot not running`, 'error');
+                return null;
+            }
+        }
+
+        async function fetchFromApi() {
+            const server = document.getElementById('apiServer').value;
+            const token = document.getElementById('apiToken').value;
+
+            if (!token) {
+                setApiStatus('Token required', 'error');
+                return null;
+            }
+
+            try {
+                const response = await fetch(server + '/api/arena', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json', 'X-Auth-Token': token }
+                });
+
+                if (!response.ok) {
+                    setApiStatus(`Error ${response.status}`, 'error');
+                    return null;
+                }
+
+                return await response.json();
+            } catch (e) {
+                setApiStatus(`Fetch error: ${e.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function fetchData() {
+            setApiStatus('Loading...', 'loading');
+
+            const source = document.getElementById('dataSource').value;
+            const data = source === 'bot' ? await fetchFromBot() : await fetchFromApi();
+
+            if (data && data.map_size) {
+                const isFirst = !gameData;
+                // Сохраняем _memory если в новых данных его нет (предотвращает мерцание тумана)
+                if (gameData && gameData._memory && !data._memory) {
+                    data._memory = gameData._memory;
+                }
+                gameData = data;
+
+                // Проверяем смену раунда и загружаем время начала
+                const newRoundName = data.round || data.arena?.round;
+                if (newRoundName && newRoundName !== currentRoundName) {
+                    currentRoundName = newRoundName;
+                    // Сбрасываем boosters при смене раунда
+                    data.boosters = {};
+                    console.log(`Round changed to ${newRoundName}, reset boosters`);
+                    // Используем время начала раунда из API (если доступно)
+                    if (data.round_start_time) {
+                        roundStartTime = new Date(data.round_start_time);
+                        console.log(`Round ${newRoundName} started at (from API):`, roundStartTime);
+                    } else {
+                        // Fallback: загружаем из лога
+                        loadRoundStartTime(newRoundName).then(startTime => {
+                            if (startTime) {
+                                roundStartTime = startTime;
+                                console.log(`Round ${newRoundName} started at (from log):`, startTime);
+                            } else {
+                                // Если лог не найден - используем текущее время
+                                roundStartTime = new Date();
+                                console.log(`No log found for ${newRoundName}, using current time`);
+                            }
+                        });
+                    }
+                }
+
+                // Обновляем время начала раунда если получено из API (даже без смены раунда)
+                if (data.round_start_time && (!roundStartTime || isFirst)) {
+                    roundStartTime = new Date(data.round_start_time);
+                }
+
+                setApiStatus(`OK (${new Date().toLocaleTimeString()})`, 'success');
+                if (isFirst) resetView();
+                else render();
+                updateInfo();
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            const source = document.getElementById('dataSource').value;
+            const interval = source === 'bot' ? 100 : 1000;
+
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.classList.remove('active');
+                btn.textContent = source === 'bot' ? 'Auto (100ms)' : 'Auto (1s)';
+                setApiStatus('Auto-refresh stopped', 'success');
+            } else {
+                fetchData();
+                autoRefreshInterval = setInterval(fetchData, interval);
+                btn.classList.add('active');
+                btn.textContent = 'Stop';
+            }
+        }
+
+        // Save/load token
+        document.getElementById('apiToken').addEventListener('change', e => {
+            localStorage.setItem('datsToken', e.target.value);
+        });
+        const savedToken = localStorage.getItem('datsToken');
+        if (savedToken) document.getElementById('apiToken').value = savedToken;
+
+        // Auto-start
+        setTimeout(() => toggleAutoRefresh(), 100);
+
+        // Zoom/Pan
+        function toggleFog() {
+            showFog = !showFog;
+            document.getElementById('fogBtn').textContent = showFog ? 'Fog: ON' : 'Fog: OFF';
+            document.getElementById('fogBtn').style.background = showFog ? '#4ecca3' : '#e94560';
+            render();
+        }
+
+        function zoomIn() { scale *= 1.2; render(); }
+        function zoomOut() { scale /= 1.2; render(); }
+        function resetView() { scale = 1; offsetX = 0; offsetY = 0; render(); }
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            offsetX = mouseX - (mouseX - offsetX) * factor;
+            offsetY = mouseY - (mouseY - offsetY) * factor;
+            scale *= factor;
+            render();
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            dragStartX = e.clientX - offsetX;
+            dragStartY = e.clientY - offsetY;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (gameData) {
+                const mapW = gameData.map_size[0];
+                const mapH = gameData.map_size[1];
+                const cellSize = Math.min(canvas.width / mapW, canvas.height / mapH) * scale;
+                document.getElementById('coordX').textContent = Math.floor((x - offsetX) / cellSize);
+                document.getElementById('coordY').textContent = Math.floor((y - offsetY) / cellSize);
+            }
+
+            if (isDragging) {
+                offsetX = e.clientX - dragStartX;
+                offsetY = e.clientY - dragStartY;
+                render();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('mouseleave', () => isDragging = false);
+
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+    "_comment": "Настройки стратегии бота v3.1 - приоритет на мобов",
+
+    "scoring": {
+        "min_obstacles_to_bomb": 1,
+        "high_value_threshold": 6,
+        "medium_value_threshold": 3,
+        "prefer_chain_reactions": true,
+        "chain_bonus_multiplier": 1.5
+    },
+
+    "cascade": {
+        "enabled": true,
+        "max_bombs_in_chain": 4,
+        "min_obstacles_per_bomb": 1,
+        "prefer_cascade_over_single": true
+    },
+
+    "exploration": {
+        "enabled": true,
+        "priority_over_low_value": true,
+        "max_path_length": 15
+    },
+
+    "safety": {
+        "escape_margin_steps": 2,
+        "avoid_dead_ends": true,
+        "min_exits_required": 2
+    },
+
+    "boosters": {
+        "priority": [
+            {"id": 1, "name": "bomb_range", "max": 5},
+            {"id": 0, "name": "pockets", "max": 5},
+            {"id": 6, "name": "bomb_delay", "max": 3},
+            {"id": 2, "name": "speed", "max": 3},
+            {"id": 5, "name": "armor", "max": 3},
+            {"id": 3, "name": "view", "max": 5},
+            {"id": 7, "name": "acrobatics", "max": 2},
+            {"id": 4, "name": "bombers", "max": 3}
+        ]
+    },
+
+    "debug": {
+        "verbose": false,
+        "log_cascade_calculations": false
+    }
+}
